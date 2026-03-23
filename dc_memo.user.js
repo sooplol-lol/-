@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         디시인사이드 메모
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.0
 // @license      MIT
 // @author       YourNickname
 // @description  디시인사이드 유저 닉네임 옆에 메모를 달아주는 단순 편의 기능입니다. (No Adult Content)

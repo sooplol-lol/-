@@ -2,7 +2,7 @@
 // @name         디시인사이드 메모
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  관리메뉴 수정 (1:백업, 2:JSON추가, 3:텍스트추가, 9:초기화)
+// @description  아이콘 복구 및 관리메뉴(1,2,3,9) 완벽 지원
 // @author       YourNickname
 // @match        https://gall.dcinside.com/board/lists*
 // @match        https://gall.dcinside.com/board/view*
@@ -10,6 +10,7 @@
 // @match        https://gall.dcinside.com/mgallery/board/view*
 // @match        https://gall.dcinside.com/mini/board/lists*
 // @match        https://gall.dcinside.com/mini/board/view*
+// @icon         https://nstatic.dcinside.com/dc/w/images/logo_icon.ico
 // @grant        GM_setValue
 // @grant        GM_getValue
 // ==/UserScript==
@@ -17,6 +18,7 @@
 (function() {
     'use strict';
 
+    // 1. 스타일 설정 (에디터 및 메모 레이아웃)
     const style = document.createElement('style');
     style.innerHTML = `
         td.gall_writer { width: auto !important; white-space: nowrap !important; }
@@ -27,6 +29,7 @@
     `;
     document.head.appendChild(style);
 
+    // 2. 데이터 관리
     let memoData = JSON.parse(GM_getValue('myDcMemo_Safe', JSON.stringify({"UID": {}, "IP": {}})));
     function saveData(data) { GM_setValue('myDcMemo_Safe', JSON.stringify(data)); memoData = data; }
 
@@ -34,6 +37,7 @@
         return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
     }
 
+    // 3. 커스텀 에디터
     function openEditor(id, type, currentMemo, callback) {
         if(document.getElementById('dc-memo-overlay')) document.getElementById('dc-memo-overlay').remove();
         const overlay = document.createElement('div');
@@ -67,13 +71,13 @@
         document.getElementById('memo-del').onclick = () => { callback("", ""); overlay.remove(); };
     }
 
-    // ★ 관리 메뉴 안내 문구 및 로직 수정 (1, 2, 3, 9)
+    // 4. 관리 메뉴 (1:백업, 2:JSON, 3:텍스트추가, 9:초기화)
     function createManageButton() {
         const btn = document.createElement('button');
         btn.textContent = "💾 메모 관리";
         btn.style = "position:fixed; bottom:20px; left:20px; z-index:9998; padding:8px 12px; background:#3b4890; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow:0px 2px 5px rgba(0,0,0,0.3); opacity:0.6;";
         btn.onclick = () => {
-            const m = prompt("[1] 백업 추출 (JSON)\n[2] JSON 데이터 추가 (병합)\n[3] 텍스트 리스트 추가 (아이디-메모)\n[9] 전체 초기화 (삭제)");
+            const m = prompt("[1] 백업 추출 (복사용)\n[2] JSON 데이터 추가 (병합)\n[3] 텍스트 리스트 추가 (아이디-메모)\n[9] 전체 초기화 (삭제)");
             
             if (m === '1') {
                 prompt("데이터를 복사해서 보관하세요:", JSON.stringify(memoData));
@@ -92,7 +96,7 @@
                 }
             } 
             else if (m === '3') {
-                const d = prompt("형식: 아이디-메모 (한 줄에 한 명씩)");
+                const d = prompt("형식: 아이디-메모 (줄바꿈으로 여러 명 가능)");
                 if(d) {
                     d.split('\n').forEach(line => {
                         const s = line.indexOf('-');
@@ -108,18 +112,17 @@
                     location.reload();
                 }
             } 
-            else if (m === '9') {
-                if(confirm("모든 메모를 삭제하시겠습니까?")) {
-                    saveData({"UID":{},"IP":{}});
-                    alert("초기화 완료");
-                    location.reload();
-                }
+            else if (m === '9' && confirm("모든 메모를 삭제하시겠습니까?")) {
+                saveData({"UID":{},"IP":{}});
+                alert("초기화 완료");
+                location.reload();
             }
         };
         document.body.appendChild(btn);
     }
     createManageButton();
 
+    // 5. 적용 로직
     function apply() {
         document.querySelectorAll('.ub-writer:not([data-memo-applied])').forEach(w => {
             w.setAttribute('data-memo-applied', 'true');

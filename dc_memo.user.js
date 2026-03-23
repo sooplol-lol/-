@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         디시인사이드 메모
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
-// @description  닉네임 우클릭 시 매번 새로운 랜덤 색상이 기본으로 지정됩니다.
+// @version      1.0
+// @description  메모 창을 열 때마다 무조건 새로운 랜덤 색상이 나타납니다.
 // @author       YourNickname
 // @match        https://gall.dcinside.com/board/lists*
 // @match        https://gall.dcinside.com/board/view*
@@ -17,7 +17,6 @@
 (function() {
     'use strict';
 
-    // 스타일 설정
     const style = document.createElement('style');
     style.innerHTML = `
         td.gall_writer { width: auto !important; white-space: nowrap !important; }
@@ -31,14 +30,9 @@
     let memoData = JSON.parse(GM_getValue('myDcMemo_Safe', JSON.stringify({"UID": {}, "IP": {}})));
     function saveData(data) { GM_setValue('myDcMemo_Safe', JSON.stringify(data)); memoData = data; }
 
-    // ★ 랜덤 색상 생성 함수 (진하고 뚜렷한 색상 위주)
+    // ★ 완전 무작위 HEX 생성기
     function getRandomColor() {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-            color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
+        return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
     }
 
     function openEditor(id, type, currentMemo, callback) {
@@ -48,16 +42,21 @@
         overlay.id = 'dc-memo-overlay';
         overlay.style = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; display:flex; justify-content:center; align-items:center;';
         
-        // ★ 에디터를 열 때마다 무조건 새로운 랜덤색을 생성해서 넣음
-        const newRandomColor = getRandomColor();
-        const defaultColor = currentMemo ? currentMemo.color : newRandomColor;
-        const defaultText = currentMemo ? currentMemo.text : "";
+        // ★ 로직 수정: 기존 메모 텍스트가 "진짜로" 있을 때만 그 색을 쓰고, 아니면 무조건 랜덤!
+        let defaultColor;
+        if (currentMemo && currentMemo.text) {
+            defaultColor = currentMemo.color;
+        } else {
+            defaultColor = getRandomColor();
+        }
+        
+        const defaultText = (currentMemo && currentMemo.text) ? currentMemo.text : "";
 
         overlay.innerHTML = `
             <div id="dc-memo-editor" style="background:#fff; padding:20px; border-radius:8px; width:280px; box-shadow:0 4px 10px rgba(0,0,0,0.3); font-family:sans-serif;">
                 <h4 style="margin:0 0 10px 0; color:#3b4890;">[${id}] 메모 설정</h4>
                 <input type="text" id="memo-input" value="${defaultText}" placeholder="메모 내용을 입력하세요">
-                <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">배경 색상 (열 때마다 랜덤)</label>
+                <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">배경 색상 (매번 랜덤 생성)</label>
                 <input type="color" id="color-input" value="${defaultColor}">
                 <div style="display:flex; justify-content:space-between; margin-top:10px;">
                     <button id="memo-del" style="background:#ff4c4c; color:#fff; ${currentMemo ? '' : 'display:none;'}">삭제</button>

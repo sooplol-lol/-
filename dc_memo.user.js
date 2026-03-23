@@ -4,8 +4,7 @@
 // @version      1.0
 // @license      MIT
 // @author       YourNickname
-// @description  디시인사이드 유저 닉네임 옆에 메모를 달아주는 단순 편의 기능입니다. (랜덤 색상 제공 및 선택 가능)
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=dcinside.com
+// @description  닉네임 우클릭 시 매번 새로운 랜덤 색상이 기본으로 지정됩니다.
 // @match        https://gall.dcinside.com/board/lists*
 // @match        https://gall.dcinside.com/board/view*
 // @match        https://gall.dcinside.com/mgallery/board/lists*
@@ -19,7 +18,6 @@
 (function() {
     'use strict';
 
-    // 1. CSS 설정
     const style = document.createElement('style');
     style.innerHTML = `
         td.gall_writer { width: auto !important; white-space: nowrap !important; }
@@ -30,14 +28,13 @@
     `;
     document.head.appendChild(style);
 
-    // 2. 데이터 관리
     let memoData = JSON.parse(GM_getValue('myDcMemo_Safe', JSON.stringify({"UID": {}, "IP": {}})));
     function saveData(data) { GM_setValue('myDcMemo_Safe', JSON.stringify(data)); memoData = data; }
 
-    // 3. 랜덤 HEX 색상 생성 함수 (눈에 잘 띄는 진한 색 위주)
+    // ★ 함수 위치 변경: 호출될 때마다 새로운 색상을 생성함
     function getRandomHexColor() {
         const h = Math.floor(Math.random() * 360);
-        const s = 70, l = 40; // 채도와 밝기 고정 (진한 색감)
+        const s = 75, l = 45; 
         const a = s * Math.min(l/100, 1 - l/100) / 100;
         const f = n => {
             const k = (n + h / 30) % 12;
@@ -47,7 +44,6 @@
         return `#${f(0)}${f(8)}${f(4)}`;
     }
 
-    // 4. 커스텀 에디터 UI
     function openEditor(id, type, currentMemo, callback) {
         if(document.getElementById('dc-memo-overlay')) document.getElementById('dc-memo-overlay').remove();
         
@@ -55,7 +51,7 @@
         overlay.id = 'dc-memo-overlay';
         overlay.style = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; display:flex; justify-content:center; align-items:center;';
         
-        // 기존 메모가 있으면 그 색상을, 없으면 새로운 랜덤 색상을 기본값으로 설정
+        // ★ 핵심: 에디터를 열 때마다 getRandomHexColor()를 새로 실행함
         const defaultColor = currentMemo ? currentMemo.color : getRandomHexColor();
         const defaultText = currentMemo ? currentMemo.text : "";
 
@@ -88,7 +84,6 @@
         document.getElementById('memo-del').onclick = () => { callback("", ""); overlay.remove(); };
     }
 
-    // 5. 관리 메뉴 버튼
     function createManageButton() {
         const btn = document.createElement('button');
         btn.textContent = "💾 메모 백업/관리";
@@ -96,18 +91,17 @@
         btn.onmouseover = () => btn.style.opacity = "1";
         btn.onmouseout = () => btn.style.opacity = "0.6";
         btn.onclick = () => {
-            const action = prompt("[ 1 ] 내 메모 백업하기\n[ 2 ] 백업 데이터 넣기\n[ 9 ] 전체 초기화");
-            if (action === '1') prompt("아래 코드를 복사해서 따로 저장해두세요:", GM_getValue('myDcMemo_Safe'));
+            const action = prompt("[ 1 ] 백업 추출\n[ 2 ] 백업 넣기\n[ 9 ] 초기화");
+            if (action === '1') prompt("복사하세요:", GM_getValue('myDcMemo_Safe'));
             else if (action === '2') {
-                const d = prompt("백업받았던 JSON 코드를 붙여넣으세요.");
-                if(d) { try { const n = JSON.parse(d); Object.assign(memoData.UID, n.UID); Object.assign(memoData.IP, n.IP); saveData(memoData); location.reload(); } catch(e){alert("잘못된 형식입니다.");}}
-            } else if (action === '9' && confirm("모든 메모를 삭제하시겠습니까?")) { saveData({"UID":{},"IP":{}}); location.reload(); }
+                const d = prompt("코드를 넣으세요.");
+                if(d) { try { const n = JSON.parse(d); Object.assign(memoData.UID, n.UID); Object.assign(memoData.IP, n.IP); saveData(memoData); alert("완료!"); location.reload(); } catch(e){alert("오류!");}}
+            } else if (action === '9' && confirm("삭제?")) { saveData({"UID":{},"IP":{}}); location.reload(); }
         };
         document.body.appendChild(btn);
     }
     createManageButton();
 
-    // 6. 실시간 적용 로직
     function applyMemo() {
         document.querySelectorAll('.ub-writer:not([data-memo-applied])').forEach(writer => {
             writer.setAttribute('data-memo-applied', 'true');

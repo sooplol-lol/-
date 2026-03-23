@@ -2,9 +2,8 @@
 // @name         디시인사이드 메모
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @license      MIT
-// @author       YourNickname
 // @description  닉네임 우클릭 시 매번 새로운 랜덤 색상이 기본으로 지정됩니다.
+// @author       YourNickname
 // @match        https://gall.dcinside.com/board/lists*
 // @match        https://gall.dcinside.com/board/view*
 // @match        https://gall.dcinside.com/mgallery/board/lists*
@@ -18,6 +17,7 @@
 (function() {
     'use strict';
 
+    // 스타일 설정
     const style = document.createElement('style');
     style.innerHTML = `
         td.gall_writer { width: auto !important; white-space: nowrap !important; }
@@ -31,17 +31,14 @@
     let memoData = JSON.parse(GM_getValue('myDcMemo_Safe', JSON.stringify({"UID": {}, "IP": {}})));
     function saveData(data) { GM_setValue('myDcMemo_Safe', JSON.stringify(data)); memoData = data; }
 
-    // ★ 함수 위치 변경: 호출될 때마다 새로운 색상을 생성함
-    function getRandomHexColor() {
-        const h = Math.floor(Math.random() * 360);
-        const s = 75, l = 45; 
-        const a = s * Math.min(l/100, 1 - l/100) / 100;
-        const f = n => {
-            const k = (n + h / 30) % 12;
-            const color = (l/100) - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-            return Math.round(255 * color).toString(16).padStart(2, '0');
-        };
-        return `#${f(0)}${f(8)}${f(4)}`;
+    // ★ 랜덤 색상 생성 함수 (진하고 뚜렷한 색상 위주)
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
     }
 
     function openEditor(id, type, currentMemo, callback) {
@@ -51,15 +48,16 @@
         overlay.id = 'dc-memo-overlay';
         overlay.style = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; display:flex; justify-content:center; align-items:center;';
         
-        // ★ 핵심: 에디터를 열 때마다 getRandomHexColor()를 새로 실행함
-        const defaultColor = currentMemo ? currentMemo.color : getRandomHexColor();
+        // ★ 에디터를 열 때마다 무조건 새로운 랜덤색을 생성해서 넣음
+        const newRandomColor = getRandomColor();
+        const defaultColor = currentMemo ? currentMemo.color : newRandomColor;
         const defaultText = currentMemo ? currentMemo.text : "";
 
         overlay.innerHTML = `
             <div id="dc-memo-editor" style="background:#fff; padding:20px; border-radius:8px; width:280px; box-shadow:0 4px 10px rgba(0,0,0,0.3); font-family:sans-serif;">
                 <h4 style="margin:0 0 10px 0; color:#3b4890;">[${id}] 메모 설정</h4>
                 <input type="text" id="memo-input" value="${defaultText}" placeholder="메모 내용을 입력하세요">
-                <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">배경 색상 (자동 생성됨)</label>
+                <label style="font-size:12px; color:#666; display:block; margin-bottom:5px;">배경 색상 (열 때마다 랜덤)</label>
                 <input type="color" id="color-input" value="${defaultColor}">
                 <div style="display:flex; justify-content:space-between; margin-top:10px;">
                     <button id="memo-del" style="background:#ff4c4c; color:#fff; ${currentMemo ? '' : 'display:none;'}">삭제</button>
@@ -76,7 +74,7 @@
         input.onkeydown = (e) => { if(e.key === 'Enter') document.getElementById('memo-save').click(); };
 
         document.getElementById('memo-save').onclick = () => {
-            const text = document.getElementById('memo-input').value.trim();
+            const text = input.value.trim();
             const color = document.getElementById('color-input').value;
             callback(text, color); overlay.remove();
         };
@@ -86,12 +84,10 @@
 
     function createManageButton() {
         const btn = document.createElement('button');
-        btn.textContent = "💾 메모 백업/관리";
+        btn.textContent = "💾 메모 관리";
         btn.style = "position:fixed; bottom:20px; left:20px; z-index:9998; padding:8px 12px; background:#3b4890; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow:0px 2px 5px rgba(0,0,0,0.3); opacity:0.6;";
-        btn.onmouseover = () => btn.style.opacity = "1";
-        btn.onmouseout = () => btn.style.opacity = "0.6";
         btn.onclick = () => {
-            const action = prompt("[ 1 ] 백업 추출\n[ 2 ] 백업 넣기\n[ 9 ] 초기화");
+            const action = prompt("[1] 백업추출 [2] 백업넣기 [9] 초기화");
             if (action === '1') prompt("복사하세요:", GM_getValue('myDcMemo_Safe'));
             else if (action === '2') {
                 const d = prompt("코드를 넣으세요.");

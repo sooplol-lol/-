@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         디시인사이드 메모
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.0.1
 // @description  닉네임 우클릭 시 매번 새로운 랜덤 색상이 기본으로 지정됩니다.
 // @author       YourNickname
 // @match        https://gall.dcinside.com/board/lists*
